@@ -1,11 +1,19 @@
+import { midiNoteToTextNoteDict_sharp, midiNoteToTextNoteDict_b } from './utility/midiNoteToTextMapper'
 import Tone from 'tone'
 import map from 'p5'
 
-import { midiNoteToTextNoteDict_sharp, midiNoteToTextNoteDict_b } from './utility/midiNoteToTextMapper'
+const log = true
+
+const logToConsole = (message) => {
+    if(log){
+        console.log(message)
+    }
+}
+
 export const main = () => {
     function midiAccessInit() {
         function context() {
-            console.log('Started')
+            logToConsole('Started')
             execContext(this)
         }
         context()
@@ -17,7 +25,7 @@ const execContext = (_this) => {
     _this = {}
     navigator.requestMIDIAccess()
         .then(function (access) {
-            console.log(JSON.stringify(access))
+            logToConsole(JSON.stringify(access))
             for (var input of access.inputs.values()) {
                 input.onmidimessage = getMIDIMessage
             }
@@ -27,7 +35,7 @@ const execContext = (_this) => {
 
             access.onstatechange = function (e) {
                 // Print information about the (dis)connected MIDI controller
-                console.log(e.port.name, e.port.manufacturer, e.port.state);
+                logToConsole(e.port.name, e.port.manufacturer, e.port.state)
             };
         }).catch(function (err) {
             console.warn(err)
@@ -36,12 +44,12 @@ const execContext = (_this) => {
 
 function getMIDIMessage(midiMessage) {
     makeSound(midiMessage)
-    console.log(midiMessage)
+    logToConsole(midiMessage)
 
 }
 
 //Synths are capable of a wide range of sounds depending on their settings
-var synthA = new Tone.Synth({
+var synthA = new Tone.PolySynth ({
     // oscillator: {
     //     type: 'fmsquare',
     //     modulationType: 'sawtooth',
@@ -67,18 +75,18 @@ var synthA = new Tone.Synth({
 //         release: 4
 //     }
 // }).toMaster()
-let now 
 //mouse events
+let notesToPlay = []
 function makeSound(midiMessage) {
     let soundToMake = convertSound(midiMessage)
     let type = midiMessage.data[0]
     if (type === 144) {
-        // console.log(soundToMake)
-        now = Tone.now()
-        synthA.triggerAttack(soundToMake.sound, "0" ,soundToMake.velocity);
+        // logToConsole(soundToMake)
+        notesToPlay.push(soundToMake.sound)
+        synthA.triggerAttack(notesToPlay, undefined, soundToMake.velocity);
     } else {
-
-        synthA.triggerRelease();
+        notesToPlay = notesToPlay.filter(note => note !== soundToMake.sound)
+        synthA.triggerRelease(soundToMake.sound);
     }
     // synthA.triggerAttack(soundToMake)
     // setTimeout(() => {
@@ -89,16 +97,22 @@ const convertSound = (midiMessage) => {
     let velocity = midiMessage.data[2]
     let midiNumber = midiMessage.data[1]
     // debugger
-    // newVelocity = map(velocity, 0, 127, 0, 1);
+    // let newVelocity = map(velocity, 0, 127, 0, 1);
     let sound = midiNoteToTextNoteDict_sharp[midiNumber]
-
-    let newVelocity = (velocity / 127)
-    newVelocity = Number.parseFloat(velocity).toFixed(2) / 100
-    console.log(`
     
+    let newVelocity = velocity / 127
+    // logToConsole(newVelocity)
+    logToConsole(`Divided ${newVelocity}`)
+
+    newVelocity = Number.parseFloat(velocity)
+    logToConsole(`Parsed ${newVelocity}`)
+    newVelocity = newVelocity.toFixed(0)
+    newVelocity = newVelocity / 100
+    logToConsole(`Parsed ${newVelocity}`)
+    logToConsole(`
+    Original Velocity ${velocity}
     Velocity ${newVelocity}
     Sound ${sound}
-    Now ${now}
     `)
     return { sound, velocity: newVelocity }
 }
