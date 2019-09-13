@@ -1,8 +1,11 @@
+import Tone from 'tone'
 import React from 'react';
 import logo from './logo.svg';
+import {main} from './main.js'
 import './App.css';
 
 function App() {
+  main()
   return (
     <div className="App">
       <header className="App-header">
